@@ -2,9 +2,10 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import List
 
+import aioredis
+from campaigns.domain.repositories import CampaignRepository, EventRepository
 from strawberry.dataloader import DataLoader
 from strawberry.django.views import AsyncGraphQLView as BaseAsyncGraphQLView
-from campaigns.domain.repositories import CampaignRepository, EventRepository
 
 
 async def load_events(keys: List[str]):
@@ -33,10 +34,16 @@ class Loaders:
 
 @dataclass
 class Context:
+    redis: aioredis.Redis
+
     repositories: Repositories = field(default_factory=Repositories)
     loaders: Loaders = field(default_factory=Loaders)
 
 
 class AsyncGraphQLView(BaseAsyncGraphQLView):
     async def get_context(self, request):
-        return Context()
+        redis = await aioredis.create_redis_pool("redis://localhost")
+
+        await redis.set('my-key', 'value')
+
+        return Context(redis=redis)

@@ -33,8 +33,8 @@ class Campaign:
 @strawberry.type
 class Query:
     @strawberry.field
-    async def hello(self) -> str:
-        return "Hello!"
+    async def hello(self, info) -> str:
+        return await info.context.redis.get("my-key", encoding="utf-8") or "FALLBACK"
 
     @strawberry.field
     async def campaign(self, info, id: strawberry.ID) -> Optional[Campaign]:
