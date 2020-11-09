@@ -17,13 +17,16 @@ async def load_events(keys: List[str]):
 
 
 class Repositories:
+    def __init__(self, redis: aioredis.Redis) -> None:
+        self.redis = redis
+
     @cached_property
     def event_repository(self):
         return EventRepository()
 
     @cached_property
     def campaign_repository(self):
-        return CampaignRepository()
+        return CampaignRepository(self.redis)
 
 
 class Loaders:
@@ -36,7 +39,7 @@ class Loaders:
 class Context:
     redis: aioredis.Redis
 
-    repositories: Repositories = field(default_factory=Repositories)
+    repositories: Repositories
     loaders: Loaders = field(default_factory=Loaders)
 
 
@@ -44,6 +47,6 @@ class AsyncGraphQLView(BaseAsyncGraphQLView):
     async def get_context(self, request):
         redis = await aioredis.create_redis_pool("redis://localhost")
 
-        await redis.set('my-key', 'value')
+        await redis.set("my-key", "value")
 
-        return Context(redis=redis)
+        return Context(redis=redis, repositories=Repositories(redis))
