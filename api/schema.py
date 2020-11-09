@@ -1,7 +1,8 @@
+import asyncio
 from typing import List, Optional
 
 import strawberry
-from campaigns.domain.repositories import CampaignRepository
+from campaigns.domain.repositories import CampaignRepository, EventRepository
 
 
 @strawberry.type
@@ -16,8 +17,16 @@ class Campaign:
     title: str
 
     @strawberry.field
-    async def events(self, info) -> List[Event]:
-        events = await info.context["loader"].load(self.id)
+    async def events(self, info, first: int) -> List[Event]:
+        repo = EventRepository()
+
+        print("fetching events ids", self.id)
+        event_ids = await repo.get_event_ids(campaign_id=self.id, first=first)
+
+        print("fetching events", self.id)
+        events = await asyncio.gather(
+            *(info.context["event_loader"].load(id) for id in event_ids)
+        )
 
         return [Event(id=e.id, title=e.title) for e in events]
 
@@ -42,10 +51,10 @@ class Query:
         return None
 
     @strawberry.field
-    async def campaigns(self) -> List[Campaign]:
+    async def campaigns(self, first: int) -> List[Campaign]:
         repo = CampaignRepository()
 
-        entity_campaigns = await repo.get_campaigns()
+        entity_campaigns = await repo.get_campaigns(first=first)
 
         return [
             Campaign(id=strawberry.ID(e.id), title=e.title) for e in entity_campaigns

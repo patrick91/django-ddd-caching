@@ -5,14 +5,16 @@ from strawberry.django.views import AsyncGraphQLView as BaseAsyncGraphQLView
 from campaigns.domain.repositories import EventRepository
 
 
-async def load_events_for_campaigns(keys: List[List[str]]):
+async def load_events(keys: List[str]):
     repo = EventRepository()
 
-    return await repo.get_events_for_campaign_batch(keys)
+    print("fetching keys", keys)
+
+    return await repo.get_events_batch(keys)
 
 
 class AsyncGraphQLView(BaseAsyncGraphQLView):
     async def get_context(self, request):
-        loader = DataLoader(load_events_for_campaigns)
+        event_loader = DataLoader(load_events)
 
-        return {"loader": loader}
+        return {"event_loader": event_loader}

@@ -2,7 +2,6 @@ from typing import List, Optional
 
 from asgiref.sync import sync_to_async
 from campaigns import models
-from django.db.models import F
 
 from .entities import Campaign, Event
 
@@ -18,8 +17,8 @@ class CampaignRepository:
         return Campaign(id=db_campaign.id, title=db_campaign.title)
 
     @sync_to_async
-    def get_campaigns(self) -> List[Campaign]:
-        return List(models.Campaign.objects.all())
+    def get_campaigns(self, first: int) -> List[Campaign]:
+        return list(models.Campaign.objects.all()[:first])
 
 
 class EventRepository:
@@ -30,24 +29,13 @@ class EventRepository:
         return [Event(id=e.id, title=e.title) for e in db_events]
 
     @sync_to_async
-    def get_events_for_campaign_batch(
-        self, campaign_ids: List[str]
-    ) -> List[List[Event]]:
-        db_events = (
-            models.Event.objects.filter(campaign__id__in=campaign_ids)
-            .all()
-            .annotate(campaign_id=F("campaign__id"))
+    def get_event_ids(self, campaign_id: str, first: int) -> List[str]:
+        return list(
+            models.Event.objects.filter(campaign__id=campaign_id).values_list(
+                "id", flat=True
+            )[:first]
         )
 
-        data = []
-
-        for id in campaign_ids:
-            data.append(
-                [
-                    Event(id=e.id, title=e.title)
-                    for e in db_events
-                    if e.campaign_id == id
-                ]
-            )
-
-        return data
+    @sync_to_async
+    def get_events_batch(self, event_ids: List[str]) -> List[List[Event]]:
+        return list(models.Event.objects.filter(id=event_ids))
