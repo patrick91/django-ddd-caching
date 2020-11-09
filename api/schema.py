@@ -21,10 +21,10 @@ class Campaign:
         repo = info.context.repositories.event_repository
         loader = info.context.loaders.event_loader
 
-        print("fetching events ids", self.id)
+        print("fetching events ids campaign id=", self.id)
         event_ids = await repo.get_event_ids(campaign_id=self.id, first=first)
 
-        print("fetching events", self.id)
+        print("fetching events", event_ids)
         events = await asyncio.gather(*(loader.load(id) for id in event_ids))
 
         return [Event(id=e.id, title=e.title) for e in events]
@@ -52,10 +52,12 @@ class Query:
         return None
 
     @strawberry.field
-    async def campaigns(self, first: int) -> List[Campaign]:
-        repo = CampaignRepository()
+    async def campaigns(self, info, first: int) -> List[Campaign]:
+        context = info.context
 
-        entity_campaigns = await repo.get_campaigns(first=first)
+        entity_campaigns = await context.repositories.campaign_repository.get_campaigns(
+            first=first
+        )
 
         return [
             Campaign(id=strawberry.ID(e.id), title=e.title) for e in entity_campaigns
