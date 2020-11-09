@@ -1,47 +1,57 @@
 import dataclasses
 import json
-from typing import List, Optional
+from typing import Any, Generic, List, Optional, TypeVar
 
 import aioredis
 from asgiref.sync import sync_to_async
 from campaigns import models
-from dacite.exceptions import DaciteError
 from dacite import from_dict
+from dacite.exceptions import DaciteError
+from typing_extensions import Protocol
 
 from .entities import Campaign, Event
 
 
-class CampaignRepository:
+class WithId(Protocol):
+    id: Any
+
+
+class BaseRedisRepository:
+    DEFAULT_EXPIRE_IN_SECONDS = 5 * 60
+
     def __init__(self, redis: aioredis.Redis) -> None:
         self.redis = redis
 
-    @sync_to_async
-    def _get_campaign_from_db(self, id: str) -> Optional[models.Campaign]:
-        return models.Campaign.objects.filter(id=id).first()
-
-    async def _cache_campaign(self, entity: Campaign):
+    async def _cache_entity(self, entity: WithId):
         await self.redis.set(
-            f"campaign-{entity.id}", json.dumps(dataclasses.asdict(entity))
+            f"{type(entity).__name__}-{entity.id}",
+            json.dumps(dataclasses.asdict(entity)),
+            expire=self.DEFAULT_EXPIRE_IN_SECONDS,
         )
 
-    async def _get_cached_campaign(self, id: str) -> Optional[Campaign]:
-        campaign_entity = await self.redis.get(f"campaign-{id}")
+    async def _get_cached_entity(self, id: Any, entity_class: Any) -> Optional[Any]:
+        entity = await self.redis.get(f"{entity_class.__name__}-{id}")
 
-        if not campaign_entity:
+        if not entity:
             return None
 
         try:
-            return from_dict(Campaign, json.loads(campaign_entity))
+            return from_dict(Campaign, json.loads(entity))
         except DaciteError:
             # TODO: log this
 
             return None
 
+
+class CampaignRepository(BaseRedisRepository):
+    @sync_to_async
+    def _get_campaign_from_db(self, id: str) -> Optional[models.Campaign]:
+        return models.Campaign.objects.filter(id=id).first()
+
     async def get_campaign_by_id(self, id: str) -> Optional[Campaign]:
-        campaign_entity = await self._get_cached_campaign(id)
+        campaign_entity = await self._get_cached_entity(id, Campaign)
 
         if campaign_entity:
-
             return campaign_entity
 
         db_campaign = await self._get_campaign_from_db(id)
@@ -51,7 +61,7 @@ class CampaignRepository:
 
         campaign_entity = Campaign(id=str(db_campaign.id), title=db_campaign.title)
 
-        await self._cache_campaign(campaign_entity)
+        await self._cache_entity(campaign_entity)
 
         return campaign_entity
 
