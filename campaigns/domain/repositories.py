@@ -1,3 +1,4 @@
+from asyncio.tasks import gather
 import dataclasses
 import json
 from typing import Any, Generic, List, Optional, TypeVar
@@ -66,8 +67,13 @@ class CampaignRepository(BaseRedisRepository):
         return campaign_entity
 
     @sync_to_async
-    def get_campaigns(self, first: int) -> List[Campaign]:
-        return list(models.Campaign.objects.all()[:first])
+    def _get_campaigns_ids(self, first: int) -> List[Campaign]:
+        return list(models.Campaign.objects.all().values_list("id", flat=True)[:first])
+
+    async def get_campaigns(self, first: int) -> List[Campaign]:
+        ids = await self._get_campaigns_ids(first)
+
+        return await gather(*(self.get_campaign_by_id(id) for id in ids))
 
 
 class EventRepository:

@@ -2,7 +2,6 @@ import asyncio
 from typing import List, Optional
 
 import strawberry
-from campaigns.domain.repositories import CampaignRepository, EventRepository
 
 
 @strawberry.type
