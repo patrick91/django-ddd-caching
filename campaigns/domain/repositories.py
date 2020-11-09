@@ -38,4 +38,4 @@ class EventRepository:
 
     @sync_to_async
     def get_events_batch(self, event_ids: List[str]) -> List[List[Event]]:
-        return list(models.Event.objects.filter(id=event_ids))
+        return list(models.Event.objects.filter(id__in=event_ids))
