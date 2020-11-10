@@ -3,16 +3,14 @@ from __future__ import annotations
 import dataclasses
 import json
 from asyncio.tasks import gather
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 
 import aioredis
 from asgiref.sync import sync_to_async
 from campaigns import models
-from dacite import from_dict
-from dacite.exceptions import DaciteError
 from typing_extensions import Protocol
 
-from .entities import Campaign, Event
+from .entities import Campaign, Event, convert_dict_to_entity, EntityType
 
 if TYPE_CHECKING:
     from api.views import DataFetchingStats
@@ -66,17 +64,6 @@ class BaseRedisRepository:
             expire=self.DEFAULT_EXPIRE_IN_SECONDS,
         )
 
-    def _convert_dict_to_entity(self, entity: str, entity_class: Any) -> Optional[Any]:
-        if not entity:
-            return None
-
-        try:
-            return from_dict(Campaign, json.loads(entity))
-        except DaciteError:
-            # TODO: log this
-
-            return None
-
     @increase_redis_sets
     async def _cache_entities_batch(self, entities: List[WithId]):
         entities_dict = {
@@ -94,22 +81,22 @@ class BaseRedisRepository:
         )
 
     @increase_redis_gets
-    async def _get_cached_entity(self, id: Any, entity_class: Any) -> Optional[Any]:
+    async def _get_cached_entity(
+        self, id: Any, entity_class: Type[EntityType]
+    ) -> Optional[EntityType]:
         entity = await self.redis.get(f"{entity_class.__name__}-{id}")
 
-        return self._convert_dict_to_entity(entity, entity_class)
+        return convert_dict_to_entity(entity, entity_class)
 
     @increase_redis_gets
     async def _get_cached_entities_batch(
-        self, ids: List[Any], entity_class: Any
-    ) -> List[Any]:
+        self, ids: List[Any], entity_class: Type[EntityType]
+    ) -> List[Optional[EntityType]]:
         keys = [f"{entity_class.__name__}-{id}" for id in ids]
 
         entities = await self.redis.mget(*keys)
 
-        return [
-            self._convert_dict_to_entity(entity, entity_class) for entity in entities
-        ]
+        return [convert_dict_to_entity(entity, entity_class) for entity in entities]
 
 
 class CampaignRepository(BaseRedisRepository):
