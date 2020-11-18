@@ -29,7 +29,7 @@ def path_to_string(path) -> str:
 class ApolloTracingExtension(Extension):
     def __init__(self):
         self.trace = apollo_reports_pb2.Trace()
-        self.root_node = apollo_reports_pb2.Trace.Node()
+        self.root_node = apollo_reports_pb2.Trace.Node()  # type: ignore
 
         self.nodes = {"": self.root_node}
 

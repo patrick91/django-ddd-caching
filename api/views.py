@@ -6,17 +6,11 @@ from typing import List
 import aioredis
 from campaigns.domain.repositories import CampaignRepository, EventRepository
 from django.http.request import HttpRequest
+from domain.repositories.stats import DataFetchingStats
 from strawberry.dataloader import DataLoader
 from strawberry.django.views import AsyncGraphQLView as BaseAsyncGraphQLView
 from strawberry.http import GraphQLHTTPResponse
 from strawberry.types.execution import ExecutionResult
-
-
-@dataclass
-class DataFetchingStats:
-    number_of_sql_calls: int = 0
-    number_of_redis_gets: int = 0
-    number_of_redis_sets: int = 0
 
 
 class Repositories:
