@@ -75,10 +75,11 @@ class AsyncGraphQLView(BaseAsyncGraphQLView):
     async def process_result(
         self, request: HttpRequest, result: ExecutionResult
     ) -> GraphQLHTTPResponse:
-        result = await super().process_result(request, result)
+        data = await super().process_result(request, result)
 
-        result["extensions"] = {
-            "dataFetching": dataclasses.asdict(self.data_fetching_stats)
+        data["extensions"] = {  # type: ignore
+            "dataFetching": dataclasses.asdict(self.data_fetching_stats),
+            **result.extensions,  # type: ignore
         }
 
-        return result
+        return data

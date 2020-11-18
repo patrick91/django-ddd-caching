@@ -3,6 +3,8 @@ from typing import List, Optional
 
 import strawberry
 
+from .extensions import ApolloTracingExtension
+
 
 @strawberry.type
 class Event:
@@ -63,4 +65,4 @@ class Query:
         ]
 
 
-schema = strawberry.Schema(Query)
+schema = strawberry.Schema(Query, extensions=[ApolloTracingExtension])
