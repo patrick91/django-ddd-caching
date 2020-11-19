@@ -1,13 +1,24 @@
 import dataclasses
 import json
-from typing import Any, List, Optional, Protocol, Type, TypeVar
+from typing import Any, Generic, List, Optional, Protocol, Type, TypeVar
+from asgiref.sync import sync_to_async
 
 import aioredis
+from django.db.models.base import Model
 from domain.entities import convert_dict_to_entity
+from domain.converter import convert_django_model
 
-from .stats import DataFetchingStats, increase_redis_gets, increase_redis_sets
+from .stats import (
+    DataFetchingStats,
+    increase_redis_gets,
+    increase_redis_sets,
+    increase_sql_queries,
+)
 
 T = TypeVar("T")
+
+M = TypeVar("M", bound=Model)
+E = TypeVar("E")
 
 
 class WithId(Protocol):
@@ -22,8 +33,11 @@ def _get_caching_key(entity: WithId) -> str:
     return _get_caching_key_for_class(type(entity), entity.id)
 
 
-class BaseRedisRepository:
-    DEFAULT_EXPIRE_IN_SECONDS = 5
+class BaseCacheRepository(Generic[M, E]):
+    model_class: M
+    entity_class: E
+
+    DEFAULT_EXPIRE_IN_SECONDS = 60 * 5
 
     def __init__(
         self, redis: aioredis.Redis, data_fetching_stats: DataFetchingStats
@@ -68,3 +82,25 @@ class BaseRedisRepository:
         entities = await self.redis.mget(*keys)
 
         return [convert_dict_to_entity(entity, entity_class) for entity in entities]
+
+    @increase_sql_queries
+    @sync_to_async
+    def _get_from_db(self, id: str) -> Optional[M]:
+        return self.model_class.objects.filter(id=id).first()
+
+    async def get_by_id(self, id: str) -> Optional[E]:
+        entity = await self._get_cached_entity(id, self.entity_class)
+
+        if entity:
+            return entity
+
+        db_value = await self._get_from_db(id)
+
+        if not db_value:
+            return None
+
+        entity = convert_django_model(db_value)
+
+        await self._cache_entity(entity)
+
+        return entity

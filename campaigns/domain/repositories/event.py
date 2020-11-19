@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from asgiref.sync import sync_to_async
 from campaigns import models
-from domain.repositories.redis import BaseRedisRepository
+from domain.repositories.cache import BaseCacheRepository
 from domain.repositories.stats import increase_sql_queries
 
 from ..entities import Event
 
 
-class EventRepository(BaseRedisRepository):
+class EventRepository(BaseCacheRepository):
     @increase_sql_queries
     @sync_to_async
     def get_events_for_campaign(self, campaign_id: str) -> List[Event]:
@@ -29,30 +29,8 @@ class EventRepository(BaseRedisRepository):
 
     @increase_sql_queries
     @sync_to_async
-    def _get_event_from_db(self, id: str) -> Optional[models.Event]:
-        return models.Event.objects.filter(id=id).first()
-
-    @increase_sql_queries
-    @sync_to_async
     def _get_events_from_db(self, ids: List[str]) -> List[models.Event]:
         return list(models.Event.objects.filter(id__in=ids))
-
-    async def get_event_by_id(self, id: str) -> Optional[Event]:
-        event_entity = await self._get_cached_entity(id, Event)
-
-        if event_entity:
-            return event_entity
-
-        db_event = await self._get_event_from_db(id)
-
-        if not db_event:
-            return None
-
-        event_entity = Event(id=str(db_event.id), title=db_event.title)
-
-        await self._cache_entity(event_entity)
-
-        return event_entity
 
     async def get_events_batch(self, event_ids: List[str]) -> List[Event]:
         entities = await self._get_cached_entities_batch(event_ids, Event)

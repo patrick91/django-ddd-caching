@@ -13,7 +13,7 @@ def convert_dict_to_entity(json_entity: str, entity_class: Type[T]) -> Optional[
 
     try:
         return from_dict(entity_class, json.loads(json_entity))
-    except DaciteError:
-        # TODO: log this
+    except DaciteError as e:
+        print(e)
 
         return None

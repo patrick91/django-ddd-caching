@@ -4,7 +4,8 @@ from functools import cached_property
 from typing import List
 
 import aioredis
-from campaigns.domain.repositories import CampaignRepository, EventRepository
+from campaigns.domain.repositories.campaign import CampaignRepository
+from campaigns.domain.repositories.event import EventRepository
 from django.http.request import HttpRequest
 from domain.repositories.stats import DataFetchingStats
 from strawberry.dataloader import DataLoader
