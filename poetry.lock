@@ -115,16 +115,19 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
-name = "django-seed"
-version = "0.2.2"
-description = "Seed your Django project with fake data"
+name = "factory-boy"
+version = "3.1.0"
+description = "A versatile test fixtures replacement based on thoughtbot's factory_bot for Ruby."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.5"
 
 [package.dependencies]
-django = ">=1.11"
-Faker = ">=0.7.7"
+Faker = ">=0.7.0"
+
+[package.extras]
+dev = ["coverage", "django", "flake8", "isort", "pillow", "sqlalchemy", "mongoengine", "wheel (>=0.32.0)", "tox", "zest.releaser"]
+doc = ["sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "faker"
@@ -382,7 +385,7 @@ full = ["aiofiles", "graphene", "itsdangerous", "jinja2", "python-multipart", "p
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.41.0"
+version = "0.41.1"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -476,7 +479,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "d9c5d909c9d550d36111627e7494f8c74793109b7f7334ce2ee6ef2b29f3aa5f"
+content-hash = "152aded3304ddbe99e896d40d510cedce3f8802f691887d1718283d357e56c5a"
 
 [metadata.files]
 aioredis = [
@@ -519,8 +522,9 @@ django-extensions = [
     {file = "django-extensions-3.0.9.tar.gz", hash = "sha256:6809c89ca952f0e08d4e0766bc0101dfaf508d7649aced1180c091d737046ea7"},
     {file = "django_extensions-3.0.9-py3-none-any.whl", hash = "sha256:dc663652ac9460fd06580a973576820430c6d428720e874ae46b041fa63e0efa"},
 ]
-django-seed = [
-    {file = "django-seed-0.2.2.tar.gz", hash = "sha256:5cdda71dcd51b2e7340e4aec9035d99d7014409a4b11adddbdff17d814968221"},
+factory-boy = [
+    {file = "factory_boy-3.1.0-py2.py3-none-any.whl", hash = "sha256:d8626622550c8ba31392f9e19fdbcef9f139cf1ad643c5923f20490a7b3e2e3d"},
+    {file = "factory_boy-3.1.0.tar.gz", hash = "sha256:ded73e49135c24bd4d3f45bf1eb168f8d290090f5cf4566b8df3698317dc9c08"},
 ]
 faker = [
     {file = "Faker-4.14.2-py3-none-any.whl", hash = "sha256:ce1c38823eb0f927567cde5bf2e7c8ca565c7a70316139342050ce2ca74b4026"},
@@ -723,8 +727,8 @@ starlette = [
     {file = "starlette-0.13.8.tar.gz", hash = "sha256:82df29b2149437ad828a883674bf031788600c876dae50835e98398bd1706183"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.41.0.tar.gz", hash = "sha256:e4b5bce94c082dd00f391cec57797e80576c63b9b1a270364ce262d6d9f5b6c2"},
-    {file = "strawberry_graphql-0.41.0-py3-none-any.whl", hash = "sha256:960296c54f71e70043553fc3577fa022ca1cb2a90bdf85e5be7921bdc784e4d8"},
+    {file = "strawberry-graphql-0.41.1.tar.gz", hash = "sha256:a41eb14d29cff7697fa6bc6a7c4b2922fc01f442757a9ed858793212dfad9f24"},
+    {file = "strawberry_graphql-0.41.1-py3-none-any.whl", hash = "sha256:8ab41258c35cc874ce9d08958b6f25d4949605e7ae108ebb3c688ba158e7f670"},
 ]
 text-unidecode = [
     {file = "text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93"},

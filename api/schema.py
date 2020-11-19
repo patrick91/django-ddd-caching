@@ -2,20 +2,58 @@ import asyncio
 from typing import List, Optional
 
 import strawberry
+from campaigns.domain import entities
 
 from .extensions import ApolloTracingExtension
+
+
+@strawberry.type
+class Brand:
+    id: strawberry.ID
+    name: str
+
+    @classmethod
+    def from_entity(cls, entity: entities.Brand):
+        return cls(
+            id=strawberry.ID(entity.id),
+            name=entity.name,
+        )
 
 
 @strawberry.type
 class Event:
     id: strawberry.ID
     title: str
+    body: str
+
+    @classmethod
+    def from_entity(cls, entity: entities.Event):
+        return cls(
+            id=strawberry.ID(entity.id),
+            title=entity.title,
+            body=entity.body,
+        )
 
 
 @strawberry.type
 class Campaign:
     id: strawberry.ID
     title: str
+    body: str
+    brand_id: strawberry.Private[str]
+
+    @classmethod
+    def from_entity(cls, entity: entities.Campaign):
+        return cls(
+            id=strawberry.ID(entity.id),
+            brand_id=entity.brand_id,
+            title=entity.title,
+            body=entity.body,
+        )
+
+    @strawberry.field
+    async def brand(self, info) -> Brand:
+        return await info.context.loaders.brand_loader.load(self.brand_id)
 
     @strawberry.field
     async def events(self, info, first: int) -> List[Event]:
@@ -28,27 +66,21 @@ class Campaign:
         print("fetching events", event_ids)
         events = await asyncio.gather(*(loader.load(id) for id in event_ids))
 
-        return [Event(id=e.id, title=e.title) for e in events]
+        return [Event.from_entity(e) for e in events]
 
 
 @strawberry.type
 class Query:
     @strawberry.field
-    async def hello(self, info) -> str:
-        return await info.context.redis.get("my-key", encoding="utf-8") or "FALLBACK"
-
-    @strawberry.field
     async def campaign(self, info, id: strawberry.ID) -> Optional[Campaign]:
         context = info.context
 
-        entity_campaign = (
+        campaign_entity = (
             await context.repositories.campaign_repository.get_campaign_by_id(id)
         )
 
-        if entity_campaign:
-            return Campaign(
-                id=strawberry.ID(entity_campaign.id), title=entity_campaign.title
-            )
+        if campaign_entity:
+            return Campaign.from_entity(campaign_entity)
 
         return None
 
@@ -56,13 +88,11 @@ class Query:
     async def campaigns(self, info, first: int) -> List[Campaign]:
         context = info.context
 
-        entity_campaigns = await context.repositories.campaign_repository.get_campaigns(
-            first=first
+        campaign_entities = (
+            await context.repositories.campaign_repository.get_campaigns(first=first)
         )
 
-        return [
-            Campaign(id=strawberry.ID(e.id), title=e.title) for e in entity_campaigns
-        ]
+        return [Campaign.from_entity(e) for e in campaign_entities]
 
 
 schema = strawberry.Schema(Query, extensions=[ApolloTracingExtension])

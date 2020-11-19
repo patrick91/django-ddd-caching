@@ -5,6 +5,7 @@ from typing import List
 
 import aioredis
 from campaigns.domain.repositories.campaign import CampaignRepository
+from campaigns.domain.repositories.brand import BrandRepository
 from campaigns.domain.repositories.event import EventRepository
 from django.http.request import HttpRequest
 from domain.repositories.stats import DataFetchingStats
@@ -29,6 +30,10 @@ class Repositories:
     def campaign_repository(self):
         return CampaignRepository(self.redis, self.data_fetching_stats)
 
+    @cached_property
+    def brand_repository(self):
+        return BrandRepository(self.redis, self.data_fetching_stats)
+
 
 @dataclass
 class Loaders:
@@ -37,13 +42,20 @@ class Loaders:
     async def load_events(self, keys: List[str]):
         repo = self.repositories.event_repository
 
-        print("fetching keys", keys)
-
         return await repo.get_events_batch(keys)
+
+    async def load_brands(self, keys: List[str]):
+        repo = self.repositories.brand_repository
+
+        return await repo.get_batch_by_ids(keys)
 
     @cached_property
     def event_loader(self):
         return DataLoader(self.load_events)
+
+    @cached_property
+    def brand_loader(self):
+        return DataLoader(self.load_brands)
 
 
 @dataclass
@@ -60,8 +72,6 @@ class AsyncGraphQLView(BaseAsyncGraphQLView):
 
         redis = await aioredis.create_redis_pool("redis://localhost")
 
-        await redis.set("my-key", "value")
-
         repositories = Repositories(redis, self.data_fetching_stats)
         loaders = Loaders(repositories)
 
@@ -76,5 +86,9 @@ class AsyncGraphQLView(BaseAsyncGraphQLView):
             "dataFetching": dataclasses.asdict(self.data_fetching_stats),
             **result.extensions,  # type: ignore
         }
+
+        # lame way to reorder a dict :)
+        for key in ["extensions", "error", "data"]:
+            data[key] = data.pop(key, None)  # type: ignore
 
         return data

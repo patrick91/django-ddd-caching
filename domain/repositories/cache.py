@@ -1,12 +1,12 @@
 import dataclasses
 import json
 from typing import Any, Generic, List, Optional, Protocol, Type, TypeVar
-from asgiref.sync import sync_to_async
 
 import aioredis
+from asgiref.sync import sync_to_async
 from django.db.models.base import Model
-from domain.entities import convert_dict_to_entity
 from domain.converter import convert_django_model
+from domain.entities import convert_dict_to_entity
 
 from .stats import (
     DataFetchingStats,
@@ -85,7 +85,7 @@ class BaseCacheRepository(Generic[M, E]):
 
     @increase_sql_queries
     @sync_to_async
-    def _get_from_db(self, id: str) -> Optional[M]:
+    def _get_by_from_db(self, id: str) -> Optional[M]:
         return self.model_class.objects.filter(id=id).first()
 
     async def get_by_id(self, id: str) -> Optional[E]:
@@ -94,7 +94,7 @@ class BaseCacheRepository(Generic[M, E]):
         if entity:
             return entity
 
-        db_value = await self._get_from_db(id)
+        db_value = await self._get_by_from_db(id)
 
         if not db_value:
             return None
@@ -104,3 +104,39 @@ class BaseCacheRepository(Generic[M, E]):
         await self._cache_entity(entity)
 
         return entity
+
+    @increase_sql_queries
+    @sync_to_async
+    def _get_batch_by_ids_from_db(self, ids: str) -> List[M]:
+        # TODO: this should return {'id': instance, 'id': None}.values()
+        # to prevent issues with missing values
+        return list(self.model_class.objects.filter(id__in=ids))
+
+    async def get_batch_by_ids(self, ids: List[str]) -> List[Optional[E]]:
+        entities = await self._get_cached_entities_batch(ids, self.entity_class)
+
+        if all(entities):
+            return entities
+
+        entities_dict = {}
+        missing_ids = []
+
+        for id_, entity in zip(ids, entities):
+            entities_dict[str(id_)] = entity
+
+            if not entity:
+                missing_ids.append(id_)
+
+        missing_entities_db = await self._get_batch_by_ids_from_db(missing_ids)
+        missing_entities = []
+
+        for db_entity in missing_entities_db:
+            entity = convert_django_model(db_entity)
+            print(entity, db_entity, type(entity))
+
+            missing_entities.append(entity)
+            entities_dict[str(db_entity.id)] = entity
+
+        await self._cache_entities_batch(missing_entities)
+
+        return list(entities_dict.values())

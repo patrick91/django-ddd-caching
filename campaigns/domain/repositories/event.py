@@ -4,6 +4,7 @@ from typing import List
 
 from asgiref.sync import sync_to_async
 from campaigns import models
+from domain.converter import convert_django_model
 from domain.repositories.cache import BaseCacheRepository
 from domain.repositories.stats import increase_sql_queries
 
@@ -16,7 +17,7 @@ class EventRepository(BaseCacheRepository):
     def get_events_for_campaign(self, campaign_id: str) -> List[Event]:
         db_events = models.Event.objects.filter(campaign__id=campaign_id).all()
 
-        return [Event(id=e.id, title=e.title) for e in db_events]
+        return [convert_django_model(e) for e in db_events]
 
     @increase_sql_queries
     @sync_to_async
@@ -52,7 +53,7 @@ class EventRepository(BaseCacheRepository):
         missing_entities = []
 
         for db_event in missing_events_db:
-            entity = Event(id=str(db_event.id), title=db_event.title)
+            entity = convert_django_model(db_event)
 
             missing_entities.append(entity)
             entities_dict[str(db_event.id)] = entity
