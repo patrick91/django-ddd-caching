@@ -96,4 +96,20 @@ the databases, the rest comes from Redis when possible, so it works like this:
 - 1 redis get for each campaign (fallbacks to db) <- can be batched
 - 1 redis get for each event (fallbacks to db) <- it is batched but not too much
 
+## Base repository implementation
+
+We now have a base repository called `BaseCacheRepository` that knows how store
+and fetch single or multiple entities from redis. And it also knows how to fetch
+a single entity from the db, so it would provide a public interface like this:
+
+```python
+class MyRepository(BaseCacheRepository):
+    model_class = MyModel
+    entity_class = MyEntity
+
+repo = MyRepository()
+
+a = repo.get_by_id("123")
+```
+
 [1] unless there's a really good use case for it
